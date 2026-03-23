@@ -1,4 +1,4 @@
-package com.craftinginterpreters.tool;
+package com.craftinginterpreters.tools;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -19,6 +19,11 @@ public class GenerateAst {
 			"Literal  : Object value",
 			"Unary    : Token operator, Expr right"
 		));
+
+		defineAst(outputDir, "Stmt", Arrays.asList(
+    	  "Expression : Expr expression",
+    	  "Print      : Expr expression"
+   		 ));
 	}
 
 
