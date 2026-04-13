@@ -1,93 +1,63 @@
-package com.craftinginterpreters.tools;
+package com.craftinginterpreters.lox;
 
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.Arrays;
-import java.util.List;
+class AstPrinter implements Expr.Visitor<String> {
+    String print(Expr expr) {
+        return expr.accept(this);
+    }
 
-public class GenerateAst {
-	public static void main(String[] args) throws IOException {
-		if (args.length != 1) {
-			System.out.println("Usage: generate_ast <output directory>");
-			System.exit(64);
-		}
-		String outputDir = args[0];
+    @Override
+    public String visitBinaryExpr(Expr.Binary expr) {
+        return parenthesize(expr.operator.lexeme, expr.left, expr.right);
+    }
 
-		defineAst(outputDir, "Expr", Arrays.asList(
-			"Binary   : Expr left, Token operator, Expr right",
-			"Grouping : Expr expression",
-			"Literal  : Object value",
-			"Unary    : Token operator, Expr right"
-		));
+    @Override
+    public String visitGroupingExpr(Expr.Grouping expr) {
+        return parenthesize("group", expr.expression);
+    }
 
-		defineAst(outputDir, "Stmt", Arrays.asList(
-    	  "Expression : Expr expression",
-    	  "Print      : Expr expression"
-   		 ));
-	}
+    @Override
+    public String visitLiteralExpr(Expr.Literal expr) {
+        if (expr.value == null) return "nil";
+        return expr.value.toString();
+    }
 
+    @Override
+    public String visitUnaryExpr(Expr.Unary expr) {
+        return parenthesize(expr.operator.lexeme, expr.right);
+    }
 
-	private static void defineAst(String outputDir, String baseName, List<String> types) throws IOException {
-		String path = outputDir + "/" + baseName + ".java";
-		PrintWriter writer = new PrintWriter(path, "UTF-8");
+    @Override
+    public String visitVariableExpr(Expr.Variable expr) {
+        return expr.name.lexeme;
+    }
 
-		writer.println("package com.craftinginterpreters.lox;");
-		writer.println();
-		writer.println("import java.util.List;");
-		writer.println();
-		writer.println("abstract class " + baseName + " {");
+    @Override
+    public String visitAssignExpr(Expr.Assign expr) {
+        return parenthesize("=" + expr.name.lexeme, expr.value);
+    }
 
-		defineVisitor(writer, baseName, types);
+    private String parenthesize(String name, Expr... exprs) {
+        StringBuilder builder = new StringBuilder();
 
-		for (String type: types) {
-			String className = type.split(":")[0].trim();
-			String fields = type.split(":")[1].trim();
-			defineType(writer, baseName, className, fields);
-		}
+        builder.append("(").append(name);
+        for (Expr expr : exprs) {
+            builder.append(" ");
+            builder.append(expr.accept(this));
+        }
+        builder.append(")");
 
-		writer.println();
-		writer.println("  abstract <R> R accept(Visitor<R> visitor);");
+        return builder.toString();
+    }
 
-		writer.println("}");
-		writer.close();
-	}
+    public static void main(String[] args) {
+        Expr expression = new Expr.Binary(
+                new Expr.Unary(
+                        new Token(TokenType.MINUS, "-", null, 1),
+                        new Expr.Literal(123)),
+                new Token(TokenType.STAR, "*", null, 1),
+                new Expr.Grouping(
+                        new Expr.Literal(45.67)));
 
-	private static void defineVisitor(PrintWriter writer, String baseName, List<String> types) {
-		writer.println("  interface Visitor<R> {");
-
-		for (String type : types) {
-			String typeName = type.split(":")[0].trim();
-			writer.println("    R visit" + typeName + baseName + "(" + typeName + " " + baseName.toLowerCase() + ");");
-		}
-
-		writer.println("  }");
-	}
-
-	private static void defineType(PrintWriter writer, String baseName, String className, String fieldList) {
-		writer.println("  static class " + className + " extends " + baseName + " {");
-
-		writer.println("    " + className + "(" + fieldList + ") {");
-
-		String[] fields = fieldList.split(", ");
-		for (String field: fields) {
-			String name = field.split(" ")[1];
-			writer.println("      this." + name + " = " + name + ";");
-		}
-
-		writer.println("    }");
-
-		writer.println();
-		writer.println("    @Override");
-		writer.println("    <R> R accept(Visitor<R> visitor) {");
-		writer.println("      return visitor.visit" + className + baseName + "(this);");
-		writer.println("    }");
-
-
-		writer.println();
-		for (String field: fields) {
-			writer.println("    final " + field + ";");
-		}
-
-		writer.println("  }");
-	}
+        System.out.println(new AstPrinter().print(expression));
+    }
 }
