@@ -1,0 +1,9 @@
+var a = 1;
+var b = 1;
+
+while (a <= 55) {
+  print a;
+  var temp = a + b;
+  a = b;
+  b = temp;
+}
