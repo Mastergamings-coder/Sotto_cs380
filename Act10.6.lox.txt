@@ -1,0 +1,10 @@
+Set-Content -Path Act10.6.lox -Value 'var start = clock();
+var a = 0;
+while (a < 100000) {
+  a = a + 1;
+}
+var end = clock();
+
+print "Loop took:";
+print end - start;
+print "seconds.";'
